@@ -8,4 +8,5 @@
 ```
 docker compose exec server bash -c 'npx sequelize db:migrate'
 ```
-
+postgres
+ZdrZ3UZXNP8MJlRsXJ3T

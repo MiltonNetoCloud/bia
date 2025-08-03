@@ -1,0 +1,44 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "=== PRE BUILD PHASE ==="
+      - echo Fazendo login no ECR...
+      # Corrigindo o account ID para ser consistente
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 395380602542.dkr.ecr.us-east-1.amazonaws.com
+      - REPOSITORY_URI=395380602542.dkr.ecr.us-east-1.amazonaws.com/bia
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+      - echo "Repository URI:" $REPOSITORY_URI
+      - echo "Image Tag:" $IMAGE_TAG
+  build:
+    commands:
+      - echo "=== BUILD PHASE ==="
+      - echo Build iniciado em `date`
+      - echo Gerando imagem da BIA...
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      - echo "Imagens Docker criadas:"
+      - docker images | grep bia
+  post_build:
+    commands:
+      - echo "=== POST BUILD PHASE ==="
+      - echo Build finalizado com sucesso em `date`
+      - echo Fazendo push da imagem para o ECR...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo "=== GERANDO IMAGEDEFINITIONS.JSON ==="
+      - printf '[{"name":"bia-container","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - echo "Arquivo imagedefinitions.json criado:"
+      - cat imagedefinitions.json
+      - echo "Verificando se o arquivo existe:"
+      - ls -la imagedefinitions.json
+      - echo "Conteúdo do diretório atual:"
+      - ls -la
+      - echo "=== FIM POST BUILD ==="
+
+artifacts:
+  files:
+    - imagedefinitions.json
+  name: bia-artifacts
